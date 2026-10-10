@@ -1,0 +1,8 @@
+# Rubis Omega EUR v1.0, horloge fixe a midi : intro -> titre -> Continuer (impulsions A jusqu a l ancre)
+300 A/45x6
+# @N : relatif a l'ancre (1re image d'update apres le 1er dessin du joueur).
+# Marche vers le rival (il bloque le passage une fois atteint), dialogue scripte
+# avec gros plan camera, combat de dresseur en appuyant sur A.
+@180 LEFT
+@330 -
+@360 A/40x6

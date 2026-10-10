@@ -1,0 +1,322 @@
+<title>60 fps natif ROSA, la suite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout : une colonne de lecture, des lots numérotés (l'ordre est la priorité), fiches à porte mesurable */
+:root {
+  --bg: #f5f6f8;
+  --paper: #ffffff;
+  --ink: #16191f;
+  --muted: #5b6270;
+  --line: #dde1e8;
+  --ruby: #a3123a;
+  --ruby-soft: #f7e6eb;
+  --sapphire: #1f4fa8;
+  --ok: #1d7a46;
+  --ok-soft: #e3f3e9;
+  --warn: #9a5b00;
+  --warn-soft: #fbefd9;
+  --wait: #5a4fb0;
+  --wait-soft: #ece9fa;
+  --f-display: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-body: "Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111318; --paper: #191c23; --ink: #e8eaef; --muted: #9aa1ae; --line: #2b303a;
+    --ruby: #f0587e; --ruby-soft: #3a1822; --sapphire: #7ea2ec;
+    --ok: #5fcf8d; --ok-soft: #15301f; --warn: #f0b252; --warn-soft: #33260f;
+    --wait: #a89cf2; --wait-soft: #241f42; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111318; --paper: #191c23; --ink: #e8eaef; --muted: #9aa1ae; --line: #2b303a;
+  --ruby: #f0587e; --ruby-soft: #3a1822; --sapphire: #7ea2ec;
+  --ok: #5fcf8d; --ok-soft: #15301f; --warn: #f0b252; --warn-soft: #33260f;
+  --wait: #a89cf2; --wait-soft: #241f42; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 860px; margin: 0 auto; padding-inline: 20px; padding-block: 48px 80px; }
+header { display: grid; gap: 10px; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-size: clamp(30px, 5vw, 42px); line-height: 1.12; margin: 0; font-weight: 700; text-wrap: balance; letter-spacing: -.01em; }
+h1 em { font-style: normal; color: var(--ruby); }
+.lede { font-size: 18px; color: var(--muted); margin: 0; max-width: 64ch; }
+h2 { font-family: var(--f-display); font-size: 24px; margin: 56px 0 14px; text-wrap: balance; }
+h3 { font-size: 18px; margin: 0; text-wrap: balance; }
+h4 { font-size: 13px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; font-weight: 600; }
+p, li { max-width: 68ch; }
+p { margin: 0 0 12px; }
+ul, ol { margin: 0 0 12px; padding-left: 22px; }
+li { margin: 3px 0; }
+code, .mono { font-family: var(--f-mono); font-size: .88em; }
+code { background: var(--line); padding: 1px 5px; border-radius: 4px; }
+a { color: var(--sapphire); }
+.tbl { overflow-x: auto; margin: 10px 0 18px; border: 1px solid var(--line); border-radius: 8px; background: var(--paper); }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+th, td { text-align: left; vertical-align: top; padding: 9px 12px; border-bottom: 1px solid var(--line); }
+th { font-size: 12px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 600; background: var(--bg); }
+tr:last-child td { border-bottom: 0; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 999px; white-space: nowrap; }
+.p-ok { background: var(--ok-soft); color: var(--ok); }
+.p-warn { background: var(--warn-soft); color: var(--warn); }
+.p-wait { background: var(--wait-soft); color: var(--wait); }
+.p-todo { background: var(--line); color: var(--muted); }
+.p-ruby { background: var(--ruby-soft); color: var(--ruby); }
+.lot { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 22px 24px; margin: 18px 0; }
+.lot-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 14px; }
+.lot-id { font-family: var(--f-mono); font-size: 13px; color: var(--ruby); font-weight: 500; }
+.lot-head .meta { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+.gate { margin-top: 14px; padding: 12px 14px; border-radius: 8px; background: var(--bg); font-size: 15px; }
+.gate b { color: var(--ruby); }
+.summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin: 26px 0 0; }
+.summary > div { background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; min-width: 0; }
+.summary .k { font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.summary .v { font-size: 15px; margin-top: 4px; }
+.q { display: grid; gap: 4px; padding: 14px 0; border-bottom: 1px solid var(--line); }
+.q:last-child { border-bottom: 0; }
+.q .reco { font-size: 14.5px; color: var(--muted); }
+.q .reco b { color: var(--ink); font-weight: 600; }
+.quote { border-left: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 15.5px; margin: 10px 0 16px; }
+.quote .who { display: block; font-size: 12px; color: var(--muted); margin-top: 4px; }
+footer { margin-top: 56px; padding-top: 18px; border-top: 1px solid var(--line); font-size: 13.5px; color: var(--muted); }
+@media (max-width: 520px) { .lot { padding: 18px 16px; } .lot-head .meta { margin-left: 0; } }
+</style>
+
+<div class="wrap">
+<header>
+  <div class="eyebrow">PRD · Kaleido · 9 octobre 2026 · branche <span class="mono">fps60</span></div>
+  <h1>60 fps natif ROSA, <em>la suite</em></h1>
+  <p class="lede">Phases 0 à 2 faites : le terrain extérieur tourne à 60 images distinctes sans toucher à la logique. Ce document reprend après le premier essai réel. Il fixe l'ordre de travail : intérieurs, combats, scènes non testées, intégration dans Kaleido, autres versions, console.</p>
+  <div class="summary">
+    <div><div class="k">Cible</div><div class="v">Rubis Oméga EUR, code v1.0 (cartouche Rev 2), Azahar 2126.1.2</div></div>
+    <div><div class="k">Principe inchangé</div><div class="v">Logique 30 Hz intouchée, dessin à chaque VBlank, matrices interpolées</div></div>
+    <div><div class="k">Porte finale</div><div class="v">Release Kaleido avec l'interrupteur « 60 fps natif », sur demande</div></div>
+  </div>
+</header>
+
+<h2>Où on en est</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Sujet</th><th>État</th><th>Preuve</th></tr></thead>
+  <tbody>
+    <tr><td>Monde extérieur (Route 103)</td><td><span class="pill p-ok">60 images</span></td><td>29 transitions distinctes sur 29 en capture image par image, contre 14 sur 29 d'origine</td></tr>
+    <tr><td>Logique, RNG, durées</td><td><span class="pill p-ok">identiques</span></td><td>Scène du rival, 4 000 images : 3 parties actives et 3 désactivées identiques (rythme du RNG et état MT19937 final)</td></tr>
+    <tr><td>Systèmes animés au dessin</td><td><span class="pill p-ok">corrigés</span></td><td>Fondus et animations d'interface figés sur le dessin ajouté ; diff du tas propre</td></tr>
+    <tr><td>Intérieurs des bâtiments</td><td><span class="pill p-ok">corrigé</span></td><td>Lot A : la 3D stéréoscopique des intérieurs rendait le décor avec des caméras non lissées. Boutique de Rosyères : écarts réguliers au lieu d'une pièce figée une image sur deux (commit 03e5428), à confirmer à l'essai réel</td></tr>
+    <tr><td>Combats</td><td><span class="pill p-ok">60 images</span></td><td>15 d'origine dans Azahar, 30 avec le lissage : le module <span class="mono">DllBattle</span> ne renouvelle l'image qu'un dessin sur deux</td></tr>
+    <tr><td>Méga-Évolution, Envol, Surf, Concours, Amie, Super Entraînement</td><td><span class="pill p-ok">60 images</span></td><td>Lot D, sauvegarde de fin de jeu ; Bases secrètes et cinématiques des légendaires non testées</td></tr>
+    <tr><td>Kaleido, v1.4, Saphir Alpha, console</td><td><span class="pill p-todo">à faire</span></td><td>Patch installé à la main dans l'Azahar de l'utilisateur, ancien fichier gardé en <span class="mono">code.ips.avant-60fps.bak</span></td></tr>
+  </tbody>
+</table></div>
+
+<p>Retour du premier essai réel (Vulkan, résolution ×6) :</p>
+<div class="quote">« ça marche pas mal […] dans les bâtiments c'est un peu saccadé […] pareil les combats à améliorer »<span class="who">Utilisateur, 9 octobre 2026</span></div>
+
+<h2>Objectifs de la suite</h2>
+<ul>
+  <li><b>Intérieurs</b> aussi fluides que la Route 103 : 60 images distinctes en marchant, sans à-coups.</li>
+  <li><b>Combats à 60 images</b> si l'alternance du module de combat peut se lever depuis <span class="mono">code.bin</span> ; sinon, 30 propres et documentés.</li>
+  <li><b>Toutes les scènes du PRD vérifiées</b> avec une sauvegarde plus avancée.</li>
+  <li><b>Un clic dans Kaleido</b> : interrupteur dans la fiche du jeu, fusion avec le taux de shiny, refus sur une version non couverte.</li>
+  <li><b>Inoffensif partout</b> : Azahar ralenti, console réelle, mauvaise version.</li>
+</ul>
+<h4>Ce qui ne change pas</h4>
+<ul>
+  <li><span class="mono">update()</span> n'est jamais modifié ; toute correction se fait côté dessin.</li>
+  <li>Aucun fichier CRO patché (règle du PRD d'origine). Une exception éventuelle pour le combat est une décision listée plus bas.</li>
+  <li>Essais dans l'Azahar isolé (bac à sable), jamais sur la sauvegarde réelle sans accord.</li>
+  <li>Pas de release à chaque étape : une seule release, quand elle est demandée.</li>
+</ul>
+
+<h2>Lots de travail, dans l'ordre</h2>
+<p>Une séance correspond à peu près à une journée de travail. Les estimations sont indicatives ; chaque lot se ferme sur une porte mesurable.</p>
+
+<section class="lot" id="lot-a">
+  <div class="lot-head">
+    <span class="lot-id">Lot A</span><h3>Intérieurs saccadés</h3>
+    <span class="meta"><span class="pill p-ok">fait le 9 octobre</span><span class="pill p-wait">essai réel à faire</span></span>
+  </div>
+  <p>Rien n'a été mesuré en intérieur. Le bac à sable permet d'y aller sans nouvelle sauvegarde : une partie scriptée descend de la Route 103 jusqu'à Rosyères et entre au Centre Pokémon.</p>
+  <h4>Hypothèses, de la plus probable à la moins probable</h4>
+  <div class="tbl"><table>
+    <thead><tr><th>#</th><th>Hypothèse</th><th>Symptôme attendu</th><th>Mesure</th></tr></thead>
+    <tbody>
+      <tr><td>A1</td><td>La caméra intérieure passe par un autre chemin (caméra H3D ou copie de la vue faite avant notre crochet) et reste à 30 Hz, alors que le joueur est interpolé</td><td>Le joueur avance d'un demi-pas puis la caméra le rattrape : tremblement, pire qu'un 30 fps régulier</td><td>Compteurs par image : caméra vue par <span class="mono">smooth_camera</span> ? clé interpolée ? Capture image par image du décor seul</td></tr>
+      <tr><td>A2</td><td>Le saut d'image du jeu se déclenche (budget de 16,7 ms émulé dépassé par le double dessin) et notre porte coupe alors l'interpolation</td><td>Alternance irrégulière de 60 et de 30</td><td>Compteur <span class="mono">n_skip</span> par seconde en intérieur</td></tr>
+      <tr><td>A3</td><td>Passe de rendu secondaire (reflet du sol, cible de rendu) calculée depuis une caméra non lissée</td><td>Reflet ou partie de l'image à 30 Hz pendant que le reste est fluide</td><td>Nombre de caméras et de passes 3D par image (<span class="mono">--count3d</span>)</td></tr>
+      <tr><td>A4</td><td>Seuils de coupure mal calibrés à l'échelle d'une pièce (coordonnées proches de l'origine)</td><td>Fort taux de refus, le joueur ou la caméra saute</td><td><span class="mono">n_jump</span> et <span class="mono">n_cut</span> rapportés à <span class="mono">n_interp</span></td></tr>
+      <tr><td>A5</td><td>L'ordinateur ne tient pas 60 images en Vulkan ×6 dans cette scène</td><td>Vitesse d'Azahar sous 100 % en intérieur</td><td>Vitesse affichée par Azahar ; essai en ×3</td></tr>
+    </tbody>
+  </table></div>
+  <h4>Correctifs selon le résultat</h4>
+  <ul>
+    <li>A1 : crochet sur le chemin de la caméra intérieure, même schéma que <span class="mono">smooth_camera</span>.</li>
+    <li>A2 : alléger le coût du runtime sur le dessin, ou laisser le saut d'origine agir sans casser la régularité.</li>
+    <li>A3 : lisser la caméra secondaire ou la dériver de la caméra lissée.</li>
+    <li>A4 : seuils ajustés, revérifiés sur la Route 103 et la scène du rival.</li>
+    <li>A5 : documenter et ajouter un repli automatique (lot B).</li>
+  </ul>
+  <p><b>Résultat.</b> Ni A1 ni A2 à A5 tels que formulés : la pièce est rendue avec les caméras des deux yeux (3D stéréoscopique, active seulement en intérieur), recalculées pendant <span class="mono">update()</span> par le module de terrain via <span class="mono">SetViewMatrix</span> (0x00392F90), et jamais vues par le crochet de caméra. Correctif : crochet en 0x00392FB4 qui retient ces caméras, lissées au début de chaque dessin. Boutique de Rosyères : écarts image à image de 4,9 à 5,25 au lieu d'une alternance 6 / 0,25, aucun tirage pendant les dessins ajoutés, extérieur inchangé. Centre Pokémon et maisons de Bourg-en-Vol non mesurés (même chemin attendu).</p>
+  <div class="gate"><b>Porte :</b> Centre Pokémon de Rosyères et maison de Bourg-en-Vol à 60 transitions distinctes sur 60 en marchant, aucune image mélangée au passage de la porte, scène du rival toujours identique (6 parties).</div>
+</section>
+
+<section class="lot" id="lot-b">
+  <div class="lot-head">
+    <span class="lot-id">Lot B</span><h3>Changements de carte et cadence irrégulière</h3>
+    <span class="meta"><span class="pill p-ok">fait le 9 octobre</span></span>
+  </div>
+  <p>Ce lot recoupe le lot A : une entrée de bâtiment est un changement de carte, et une cadence irrégulière est le premier suspect pour « saccadé ».</p>
+  <ul>
+    <li>Changement de carte, porte, téléportation : vérifier qu'aucune image ne mélange deux cartes (les clés de matrices sont réutilisées quand les objets sont réalloués).</li>
+    <li>Azahar limité à 50 % : le jeu doit garder sa vitesse en temps émulé et ne jamais planter.</li>
+    <li>Repli automatique : si le jeu saute trop de dessins sur une fenêtre de 2 secondes, repasser en 30 images régulières plutôt qu'en 30/60 irrégulier, puis réessayer.</li>
+    <li>Combinaison de touches en jeu pour couper et rétablir le lissage, lue dans le code statique, sans GDB.</li>
+  </ul>
+  <p><b>Résultat.</b> Deux images parasites trouvées et corrigées : une image blanche au début du balayage d'entrée et l'extérieur visible une image avant le fondu de sortie (le dessin ajouté montrait l'ancienne capture de la transition). Plus de dessin ajouté sur un tick où une transition change d'état. À 50 % de vitesse : rapport tick / dessin conservé, aucun dessin sauté. Repli automatique abandonné : le jeu compte en temps émulé et ne peut pas voir un hôte lent. Interrupteur L + Select vérifié. Runtime déplacé dans une fonction morte de 10 Ko. Scène du rival rejouée (2 actives, 2 coupées) : état MT19937 final identique octet pour octet, et identique à la phase 2. Vérifié sur 4 passages de porte, pas 20.</p>
+  <div class="gate"><b>Porte :</b> 0 image mélangée sur 20 passages de porte scriptés ; à 50 % de vitesse, durées en temps émulé identiques à l'original ; interrupteur en jeu vérifié.</div>
+</section>
+
+<section class="lot" id="lot-c">
+  <div class="lot-head">
+    <span class="lot-id">Lot C</span><h3>Combats à 60 images</h3>
+    <span class="meta"><span class="pill p-ok">fait le 9 octobre</span></span>
+  </div>
+  <p>Constat de la phase 2 : en combat, la caméra et les os changent à chaque tick, le jeu dessine et présente à chaque image, mais l'image affichée ne change qu'un dessin sur deux, toujours sur la même parité. L'original s'affiche donc à 15 images par seconde dans Azahar.</p>
+  <ol>
+    <li><b>C1. Localiser l'alternance au niveau du GPU.</b> Journal par dessin des commandes envoyées (listes de commandes, transferts d'affichage, remplissages) via les fonctions de <span class="mono">code.bin</span> que le module de combat appelle. Pistes : écran du haut rendu un dessin sur deux (partage de charge avec l'écran du bas), double cible de rendu, passe 3D alternée.</li>
+    <li><b>C2. Trouver la valeur qui décide.</b> Point d'arrêt en lecture sur la parité du gestionnaire d'images (<span class="mono">+0x0E</span>) et sur les candidats trouvés en C1. Si la décision lit une donnée de <span class="mono">code.bin</span> ou passe par une fonction exportée par <span class="mono">static.crs</span>, on peut agir sans toucher au CRO.</li>
+    <li><b>C3. Lever l'alternance</b> sur le seul dessin ajouté, avec les mêmes garanties : aucun effet sur la logique, vérification par la scène du rival (qui contient un combat).</li>
+    <li><b>C4. Mesurer le coût hôte.</b> Si l'alternance servait à alléger le GPU, rendre l'écran du haut à chaque image coûte plus cher sur PC.</li>
+  </ol>
+  <p><b>Point de décision après C2.</b> Si la décision n'existe que dans le code du CRO, trois issues : rester à 30 (documenté), patcher le CRO en mémoire après son chargement depuis le runtime (le fichier reste intact, mais la règle du PRD est contournée et le comportement sur console est incertain), ou abandonner le combat à 60.</p>
+  <p><b>Résultat.</b> Pas d'alternance à lever : la « mi-cadence » de la phase 2 était un artefact de la capture sous GDB. Mesure sans pause (index du tampon affiché dans la mémoire partagée GSP, empreinte de chaque image) : combat du rival à 58 images présentées par seconde réelle avec le lissage, 1 image répétée sur 233, contre 29 sans. Le combat utilise les caméras des yeux, lissées depuis le lot A. Coût hôte : 89 % de vitesse en OpenGL ×6, 96 à 106 % en Vulkan ×6. Aucune décision sur les CRO nécessaire.</p>
+  <div class="gate"><b>Porte :</b> combat de dresseur à 60 transitions distinctes sur 60 en capture ; scène du rival identique sur 6 parties ; vitesse d'émulation mesurée et notée. À défaut, décision écrite et limite documentée dans le README.</div>
+</section>
+
+<section class="lot" id="lot-d">
+  <div class="lot-head">
+    <span class="lot-id">Lot D</span><h3>Scènes non testées</h3>
+    <span class="meta"><span class="pill p-ok">fait le 10 octobre</span><span class="pill p-wait">2 scènes restantes</span></span>
+  </div>
+  <p>Demande une sauvegarde plus avancée, idéalement après la Ligue (Envol, Méga-Évolution, Surf, Bases secrètes). Elle sera copiée dans le bac à sable ; l'originale n'est jamais modifiée.</p>
+  <div class="tbl"><table>
+    <thead><tr><th>Scène</th><th>Risque propre</th><th>Critère</th></tr></thead>
+    <tbody>
+      <tr><td>Méga-Évolution</td><td>Nombre d'os qui change d'un tick à l'autre</td><td>Aucun glissement à la transformation</td></tr>
+      <tr><td>Envol</td><td>Caméra libre rapide, grandes distances (seuils de translation)</td><td>60 images, pas d'oscillation</td></tr>
+      <tr><td>Surf, vélo, course</td><td>Vitesses plus élevées que la marche</td><td>Pas de refus visibles</td></tr>
+      <tr><td>Concours, Amie Pokémon, Super Entraînement</td><td>Écran du bas, minijeux minutés, interface 2D</td><td>Même vitesse, minijeux fonctionnels</td></tr>
+      <tr><td>Bases secrètes</td><td>Objets placés par le joueur, autre chemin de rendu possible</td><td>Pas d'objet qui saute</td></tr>
+      <tr><td>Cinématiques des légendaires</td><td>Coupures de plan en série</td><td>Aucune image mélangée entre deux plans, durée identique</td></tr>
+    </tbody>
+  </table></div>
+  <p><b>Résultat</b> (sauvegarde de fin de jeu, Vulkan ×6) : vélo, Surf, Envol, atterrissage, Méga-Évolution, Pokémon-Amie, Super Entraînement et Concours à 57-59 images par seconde réelle sur l'écran 3D. L'Envol demandait un correctif du seuil de translation (caméra très rapide refusée à chaque tick). Le Super Entraînement fait tomber Azahar à 25 % en ×6 même sans lissage (104 % en ×3). Non testés : Bases secrètes, cinématiques des légendaires.</p>
+  <div class="gate"><b>Porte :</b> chaque ligne vérifiée en capture, ou listée comme limite connue avec sa raison.</div>
+</section>
+
+<section class="lot" id="lot-e">
+  <div class="lot-head">
+    <span class="lot-id">Lot E</span><h3>Intégration dans Kaleido</h3>
+    <span class="meta"><span class="pill p-ok">fait le 10 octobre</span><span class="pill p-wait">essai dans l'app à faire</span></span>
+  </div>
+  <p><b>Résultat.</b> Branche fusionnée avec <span class="mono">main</span>. Entrée « 60 fps natif » dans Mods et réglages : patch embarqué par SHA-256, fusion avec le <span class="mono">code.ips</span> existant (refus si chevauchement), retrait qui garde le taux de chromatiques, remplacement d'une version plus ancienne, blocage si une mise à jour est installée, refus si un code « 60 FPS » est actif. Tests Rust (dont ROM réelle) et front au vert. Pas encore essayé dans l'application lancée.</p>
+  <ul>
+    <li><b>Remettre la branche à jour.</b> <span class="mono">fps60</span> part de la 0.5.0 ; <span class="mono">main</span> a 20 commits d'avance (0.7.0, mods v2, LayeredFS 3DS).</li>
+    <li><b>Patchs précompilés.</b> Les utilisateurs n'ont pas de compilateur ARM : Kaleido embarque les <span class="mono">code.ips</span> produits par <span class="mono">build.py</span>, un par SHA-256 de <span class="mono">code.bin</span>, au lieu de compiler le runtime comme le prévoyait le PRD d'origine.</li>
+    <li><b>Un seul producteur de <span class="mono">code.ips</span>.</b> Kaleido applique le taux de shiny et le lissage au <span class="mono">code.bin</span> d'origine, refuse si deux patchs touchent les mêmes octets, puis écrit un seul IPS (<span class="mono">crates/formats/src/ips.rs</span> a déjà <span class="mono">create</span> et <span class="mono">apply</span>).</li>
+    <li><b>Interrupteur « 60 fps natif »</b> dans la fiche du jeu, marqué expérimental, avec retrait propre (restaure le patch shiny seul ou rien).</li>
+    <li><b>Garde-fous.</b> Refus si la mise à jour 1.4 est installée dans Azahar et qu'aucun profil 1.4 n'existe ; codes « 60 FPS » de la base de triche signalés comme incompatibles (ils doubleraient la vitesse).</li>
+    <li><b>Réglages conseillés</b> affichés : limite de vitesse 100 %, résolution interne ×3 ou ×4 si l'ordinateur peine.</li>
+  </ul>
+  <div class="gate"><b>Porte :</b> depuis une installation propre, activer puis désactiver dans Kaleido donne exactement les octets attendus (lissage + shiny, shiny seul, rien) ; tests Rust au vert.</div>
+</section>
+
+<section class="lot" id="lot-f">
+  <div class="lot-head">
+    <span class="lot-id">Lot F</span><h3>Autres versions</h3>
+    <span class="meta"><span class="pill p-todo">1 à 2 séances par version</span><span class="pill p-wait">attend les fichiers</span></span>
+  </div>
+  <ul>
+    <li><b>Rubis Oméga v1.4</b> (cible du PRD d'origine) : demande le <span class="mono">code.bin</span> de la mise à jour. Adresses relocalisées par signatures d'octets autour de chaque crochet, puis vérifiées en jeu.</li>
+    <li><b>Saphir Alpha</b> v1.0 et v1.4 : même méthode ; Zetta_D a déjà publié la boucle d'AS v1.4.</li>
+    <li>Autres régions : seulement si quelqu'un fournit les fichiers.</li>
+  </ul>
+  <div class="gate"><b>Porte :</b> un profil par SHA-256, chaque crochet vérifié par <span class="mono">build.py</span>, Route 103 et scène du rival rejouées sur chaque version.</div>
+</section>
+
+<section class="lot" id="lot-g">
+  <div class="lot-head">
+    <span class="lot-id">Lot G</span><h3>Console réelle et release</h3>
+    <span class="meta"><span class="pill p-todo">1 séance + essai utilisateur</span></span>
+  </div>
+  <ul>
+    <li><b>New 3DS avec Luma</b> (<span class="mono">/luma/titles/000400000011C400/code.ips</span>) : le jeu doit rester à 30 images sans artefact, ou le runtime doit se désactiver seul (allocation refusée, <span class="mono">failed</span> ≠ 0). Une heure de jeu sans plantage.</li>
+    <li><b>Notes de version</b> : ce qui est lissé, ce qui reste à 30 Hz (particules, défilement d'eau, interface 2D), coût sur l'ordinateur, versions couvertes.</li>
+    <li><b>Fusion de <span class="mono">fps60</span></b> dans <span class="mono">main</span>, puis release quand elle est demandée.</li>
+  </ul>
+  <div class="gate"><b>Porte :</b> release Kaleido avec « 60 fps natif » pour Rubis Oméga, essai validé par l'utilisateur.</div>
+</section>
+
+<h2>Plus tard, hors de cette suite</h2>
+<ul>
+  <li>Interface 2D, particules et défilement de textures à 60 Hz (le PRD d'origine les laissait à 30 Hz en v1).</li>
+  <li>Second jeu 3DS avec le même runtime (X/Y ou Soleil/Lune), pour mesurer le vrai coût par jeu.</li>
+  <li>Interpolation côté émulateur (option A du PRD d'origine) et FPSLocker pour la Switch.</li>
+</ul>
+
+<h2>Décisions à prendre</h2>
+<div class="q">
+  <div><b>1. Quel bâtiment, et à quelle vitesse tournait Azahar ?</b></div>
+  <div class="reco">Le nom du bâtiment et le pourcentage affiché en bas d'Azahar suffisent à départager A2/A5 des autres hypothèses. <b>Par défaut :</b> mesure au Centre Pokémon de Rosyères et dans la maison de Bourg-en-Vol.</div>
+</div>
+<div class="q">
+  <div><b>2. Une sauvegarde plus avancée est-elle disponible ?</b></div>
+  <div class="reco">Nécessaire pour le lot D. <b>Recommandé :</b> une sauvegarde après la Ligue, copiée dans le bac à sable.</div>
+</div>
+<div class="q">
+  <div><b>3. Combat : patch du CRO en mémoire autorisé si C2 ne trouve rien dans <span class="mono">code.bin</span> ?</b></div>
+  <div class="reco"><b>Recommandé :</b> décider après C2, sur pièces. Par défaut on reste à 30 images en combat.</div>
+</div>
+<div class="q">
+  <div><b>4. Fichiers des autres versions</b></div>
+  <div class="reco">Mise à jour 1.4 de Rubis Oméga, ROM de Saphir Alpha. Sans eux, la release couvre seulement Rubis Oméga v1.0 et Kaleido refuse les autres versions.</div>
+</div>
+<div class="q">
+  <div><b>5. Console réelle disponible ?</b></div>
+  <div class="reco">Une New 3DS avec Luma permet de vérifier l'innocuité. Sinon, la release le dit.</div>
+</div>
+<div class="q">
+  <div><b>6. Combinaison de touches pour couper le lissage en jeu</b></div>
+  <div class="reco"><b>Proposition :</b> L + Select maintenus une seconde, à vérifier contre les raccourcis du jeu.</div>
+</div>
+
+<h2>Risques</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Risque</th><th>Impact</th><th>Parade</th></tr></thead>
+  <tbody>
+    <tr><td>L'alternance du combat n'existe que dans <span class="mono">DllBattle</span></td><td>Combat bloqué à 30</td><td>Décision 3 ; limite documentée</td></tr>
+    <tr><td>Le code ajouté ne tient plus dans la marge de <span class="mono">.text</span> (0x9F0 octets, environ 2 Ko utilisés en release)</td><td>Nouveaux crochets impossibles</td><td>Code chargé dans la zone allouée au démarrage, ou fonction morte vérifiée comme pour les essais</td></tr>
+    <tr><td>Correctif intérieur qui dégrade l'extérieur</td><td>Régression</td><td>Route 103 et scène du rival rejouées à chaque lot</td></tr>
+    <tr><td>Coût hôte double en combat si l'écran du haut est rendu à chaque image</td><td>Ralentissement sur PC modeste</td><td>Mesure C4, réglage conseillé, repli automatique</td></tr>
+    <tr><td>Patch posé sur une mauvaise version</td><td>Plantage</td><td>Refus par SHA-256 dans Kaleido, détection de la mise à jour 1.4</td></tr>
+  </tbody>
+</table></div>
+
+<h2>Calendrier indicatif</h2>
+<div class="tbl"><table>
+  <thead><tr><th>Ordre</th><th>Lot</th><th>Séances</th><th>Dépend de</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>A. Intérieurs</td><td>1 à 2</td><td>Réponse 1 (facultative)</td></tr>
+    <tr><td>2</td><td>B. Cartes et cadence</td><td>1</td><td>A</td></tr>
+    <tr><td>3</td><td>C. Combats</td><td>2 à 4</td><td>Décision 3 après C2</td></tr>
+    <tr><td>4</td><td>D. Scènes non testées</td><td>2</td><td>Sauvegarde avancée</td></tr>
+    <tr><td>5</td><td>E. Kaleido</td><td>2</td><td>A, B (C et D peuvent suivre)</td></tr>
+    <tr><td>6</td><td>F. Autres versions</td><td>1 à 2 par version</td><td>Fichiers</td></tr>
+    <tr><td>7</td><td>G. Console et release</td><td>1</td><td>E ; demande de release</td></tr>
+  </tbody>
+</table></div>
+
+<footer>Sources : PRD « 60 FPS natif : 3DS (ROSA) puis toutes plateformes » (8 octobre 2026), <span class="mono">ctr-smooth/README.md</span>, <span class="mono">ctr-smooth/docs/runtime.md</span>, commits f57a841, 43da546 et 4f6a0ef de la branche <span class="mono">fps60</span>.</footer>
+</div>

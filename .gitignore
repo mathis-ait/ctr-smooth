@@ -1,0 +1,15 @@
+# Données du jeu : jamais dans le dépôt
+*.3ds
+*.cia
+*.cxi
+code.bin
+exheader.bin
+*.cro
+# Sorties de rétro-ingénierie (dérivées du programme du jeu)
+re/out/
+# Compilation : seul le patch distribué est versionné
+runtime/build/*
+!runtime/build/code.ips
+# Essais
+proto/replay/*.bin
+__pycache__/

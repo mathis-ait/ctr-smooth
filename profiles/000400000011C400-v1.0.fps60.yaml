@@ -1,0 +1,66 @@
+# Profil « 60 fps natif » — Pokémon Rubis Oméga (EUR), code cartouche v1.0 (Rev 2).
+# Brouillon phase 0 : seules les adresses de la boucle principale sont vérifiées en jeu.
+# Grammaire inspirée de FPSLocker-Warehouse : un profil par Title ID et par hash de code.bin.
+
+game: Pokémon Rubis Oméga
+title_id: 000400000011C400
+region: EUR
+version: "1.0"           # NCCH 0x0002, ExHeader « sango-1 » remaster 3 ; mise à jour 1.4 NON couverte
+code_sha256: d587c98ac5c4dedacf9be4baf2d6b7d10169e6a63f8bc35b132002cc27bc1a37
+code_base: 0x00100000
+sections:
+  text:   { addr: 0x00100000, size: 0x479604 }
+  rodata: { addr: 0x0057A000, size: 0x071A14 }
+  data:   { addr: 0x005EC000, size: 0x0439F4 }
+  bss:    { addr: 0x0062F9F4, size: 0x07EC2C }   # suit .data sans alignement ; marge libre 0x006AE620-0x006AF000
+  stack:  0x40000
+
+# Boucle principale (vérifiée par compteurs en jeu, Azahar, écran titre).
+main_loop:
+  run_each_frame: 0x0010E354      # appelée à chaque VBlank (~60/s) depuis 0x00108A48 (0x00108AD0)
+  frame_manager: { heap: 0x08C650B4, mode: +0x0D, parity: +0x0E, requested_mode: +0x0C, time_scale_f32: +0x10, gfx_ctx_ptr: +0x1C }
+  mode_byte: 0x08C650C1           # = frame_manager+0x0D ; 1 = 30 fps (alternance update/draw), 0 = 60 fps (update+draw) — cible des codes Reshiban
+  update_path: 0x0010E394         # r6 = 1 ; corps à 0x0010E3D0 (0x117ECC, 0x122C6C, 0x12DDF4 = update du jeu)
+  no_update_path: 0x0010E3B8
+  skip_draw_on_update_frame: 0x0010E53C   # bne 0x0010E554 ; nop → draw() à chaque image (prototype phase 0)
+  draw_begin: 0x0010E568          # svc 0x28 GetSystemTick, puis 0x1117A4(gfx,7) … 0x11153C(gfx) (présentation)
+  draw_end: 0x0010E620            # svc 0x28 ; seuils 0x411A (16 666 µs) / 0x8235 (33 333 µs) ; skip = [gfx_ctx+0x1FE]
+  dead_code_cave: [0x0010E398, 0x0010E3B4]   # 8 mots ré-écrivables sur le chemin update (utilisés par les compteurs)
+
+# Chemin de rendu (voir docs/rosa-render-map.md et docs/runtime.md) — vérifié en jeu en phase 1.
+render:
+  engine: "NintendoWare nw::gfx (NW4C) + gfl::grp::g3d (H3D) ; pas gfl2::renderingengine"
+  world_matrices: "calculées dans update(), stockées dans les objets, lues par draw()"
+  render_queue: 0x0054DD58          # parcours de la file NW4C : maillages nw::gfx et commandes H3D
+  hooks:                            # « b »/« bl » vers le runtime ; octets d'origine vérifiés par build.py
+    gate:    { addr: 0x0010E530, orig: "0d00d4e5" }   # + 0x0010E534 cmp r0,#0, 0x0010E538 nop
+    end:     { addr: 0x0010E61C, orig: "00f020e3" }
+    camera:  { addr: 0x00375EA8, orig: "ff4f2de9", arg: "[sp+0xC]", matrices: [0x148, 0x178] }
+    h3d:     { addr: 0x0039B338, orig: "f84f2de9", arg: r0, bones: { count: 0x40, array: 0x4C, stride: 0x30 } }
+    nwmesh:  { addr: 0x002EC354, orig: "f0412de9", arg: r2, matrices: [0x8C],
+               skeletal: { vtable: 0x005DB47C, skeleton: 0x220, world_pose: { array: 0x40, count: 0x48 }, skin_pose: { array: 0x50, count: 0x58 } } }
+    # systèmes animés au dessin, neutralisés sur le dessin ajouté (phase 2)
+    fade:    { addr: 0x0010E5AC, orig: "6b3900eb", note: "bl 0x0011CB60 ; gestionnaire *(0x0062F830), contextes +0x38/+0x3C (avance figée : +0x46), rappel +0x40" }
+    lytanim: { addr: 0x0014D618, orig: "f05f2de9", note: "avance des animations d'interface 2D" }
+    # caméras des yeux (3D stéréo, intérieurs) : posées pendant update() par 0x00377984 -> SetViewMatrix
+    setview: { addr: 0x00392FB4, orig: "524f80e2", note: "add r4,r0,#0x148 ; r0 = nw::gfx::Camera de l'œil, vue +0x148, inverse +0x178" }
+    hid:     { addr: 0x0036FB34, orig: "981084e2", note: "boutons tenus [r4+0x78] -> S.pad (L+Select) ; builds de test : entrées injectées" }
+  transitions: { manager: 0x0062F830, contexts: [0x38, 0x3C], signature: { state: 0x0C, flags16: 0x44, flag: 0x48 }, note: "pas de dessin ajouté au changement de signature" }
+  thresholds: { translation_max: 48.0, translation_rel: 0.25, translation_min: 0.5, rotation: 0.7, rotation_camera: 0.25 }
+  interpolation: "cadence adaptative par matrice : P + (C - P) * k / T, T = intervalle entre deux changements (2 à 8 images)"
+  runtime:
+    hooks: { addr: 0x00579610, max: 0x9F0 }     # marge de fin de .text : trampolines
+    code: { addr: 0x004FBF20, max: 0x2870, head: "f04f2de9b80f9fe5" }  # fonction morte : runtime puis essais
+    state: 0x006AE640                           # marge de fin de .bss
+    table: { addr: 0x0A000000, size: 0x48000 }  # svcControlMemory au premier appel
+
+# Pour les essais (builds de test uniquement)
+test:
+  code_cave: "après le runtime dans la fonction morte 0x004FBF20 (aucune référence, aucun littéral, non exportée par static.crs)"
+  rodata_cave: { addr: 0x005EBA20, size: 0x5E0 }
+  tinymt: 0x08C55E24               # TinyMT global, consommé pendant la marche
+  rng_mt19937: 0x08C55E64          # instance gfl MT (index + 624 mots), avancée à chaque VBlank par 0x0010676C
+  camera_object: 0x14C486B8        # nw::gfx::Camera du terrain (Route 103), vue en +0x148
+
+prototype:
+  draw_every_frame: { 0x0010E53C: "00f020e3" }   # phase 0 : update 29,6/s inchangé, draw 59,2/s
