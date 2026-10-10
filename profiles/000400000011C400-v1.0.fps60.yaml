@@ -50,13 +50,15 @@ render:
   interpolation: "cadence adaptative par matrice : P + (C - P) * k / T, T = intervalle entre deux changements (2 à 8 images)"
   runtime:
     hooks: { addr: 0x00579610, max: 0x9F0 }     # marge de fin de .text : trampolines
-    code: { addr: 0x004FBF20, max: 0x2870, head: "f04f2de9b80f9fe5" }  # fonction morte : runtime puis essais
+    code: { addr: 0x00579610, max: 0x9F0 }      # runtime puis crochets (build distribué)
+    test_area: { addr: 0x004FBF20, max: 0x2868, note: "builds de test seulement : initialisation statique appelée au démarrage, écrasée" }
+  alpha_sapphire: { title_id: 000400000011C500, code_sha256: b7f9ce60361f3709ed0ce879658afe10a712f7db060640fa72bba826301b7c16, note: "même patch (adresses identiques pour tout ce que touche le runtime)" }
     state: 0x006AE640                           # marge de fin de .bss
     table: { addr: 0x0A000000, size: 0x48000 }  # svcControlMemory au premier appel
 
 # Pour les essais (builds de test uniquement)
 test:
-  code_cave: "après le runtime dans la fonction morte 0x004FBF20 (aucune référence, aucun littéral, non exportée par static.crs)"
+  code_cave: "après le runtime dans 0x004FBF20 (initialisation statique écrasée : bac à sable seulement)"
   rodata_cave: { addr: 0x005EBA20, size: 0x5E0 }
   tinymt: 0x08C55E24               # TinyMT global, consommé pendant la marche
   rng_mt19937: 0x08C55E64          # instance gfl MT (index + 624 mots), avancée à chaque VBlank par 0x0010676C

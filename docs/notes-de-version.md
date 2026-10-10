@@ -4,7 +4,7 @@
 
 ---
 
-# Kaleido 0.9.0 : Rubis Oméga en 60 fps natif
+# Kaleido 0.9.0 : Rubis Oméga en 60 fps natif (voir aussi 0.9.1 : Saphir Alpha et correctif)
 
 ## 60 fps natif (expérimental)
 - Nouvelle entrée « 60 fps natif » dans **Mods et réglages** de Pokémon Rubis Oméga (catégorie Fluidité). Le jeu affiche 60 images par seconde au lieu de 30 : caméra, personnages et Pokémon bougent entre deux images, en exploration, en intérieur, en combat, en Envol, en Surf, pendant les Méga-Évolutions, les Concours et Pokémon-Amie.

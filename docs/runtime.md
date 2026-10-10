@@ -144,8 +144,8 @@ fois n'est pas mélangée.
 
 | Zone | Adresse | Contenu |
 | --- | --- | --- |
-| Crochets | 0x00579610–0x0057A000 (marge de fin de `.text`) | trampolines de `hooks.S`, 176 octets |
-| Runtime | 0x004FBF20–0x004FE790 (fonction morte de 10 Ko : aucune référence, aucun littéral, non exportée par `static.crs`) | corps de `smooth.c`, 2,4 Ko, puis code des essais ; `build.py` vérifie ses premiers octets |
+| Runtime et crochets | 0x00579610–0x0057A000 (marge de fin de `.text`, 2 544 octets) | build distribué : `smooth.c` (2 320 octets, sans compteurs de statistiques) puis `hooks.S` (176 octets) ; reste 48 octets |
+| Builds de test | 0x004FBF20–0x004FE788 | `smooth.c` avec compteurs et le code des essais. **Ce n'est pas une fonction morte** : c'est une initialisation statique (tableau en 0x0062FC34) appelée au démarrage, sans référence directe. L'écraser l'empêche de tourner et fait exécuter le runtime au démarrage (accès non mappés). La 0.9.0 y avait placé le runtime distribué (corrigé en 0.9.1) ; réservé aux essais dans le bac à sable, impossible avec Saphir Alpha (le jeu plante). | corps de `smooth.c`, 2,4 Ko, puis code des essais ; `build.py` vérifie ses premiers octets |
 | Données des essais | 0x005EBA20–0x005EC000 (marge de fin de `.rodata`) | script d'entrées compilé |
 | État `State` | 0x006AE640 (marge de fin de `.bss`, hors fichier) | initialisé au premier appel (magic `SMTH`) |
 | Table | 0x0A000000, 288 Ko, `svcControlMemory` | 2 048 entrées de 120 octets (0x3C000) ; instantané en +0x3C000, trace en +0x3D000 (tests) |

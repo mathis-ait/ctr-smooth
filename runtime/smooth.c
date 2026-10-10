@@ -33,6 +33,12 @@
 #define TAB_BYTES (TAB_N * sizeof(Entry)) /* 0x40000 */
 #define SNAP_OFF 0x40000u
 #define TRACE_OFF 0x41000u
+/* Compteurs de statistiques : builds de test seulement (place comptée dans la marge de .text). */
+#if defined(TEST_SCRIPT) || defined(COUNT3D) || defined(STATS)
+#define STAT(x) ((x)++)
+#else
+#define STAT(x) ((void)0)
+#endif
 #define MAX_PERIOD 8u   /* au-delà : changement isolé, mélangé sur un tick (T = 2) */
 #define UNSEEN_FRAMES 4u
 #define PAD_COMBO 0x204u /* L (0x200) + Select (0x4) ; sans R : L + R + Start redémarre le jeu */
@@ -95,7 +101,7 @@ static Entry *find(u32 key)
         cand->swp = 0;
         cand->seen = 0;
     } else {
-        S.n_miss++;
+        STAT(S.n_miss);
     }
     return cand;
 }
@@ -120,7 +126,7 @@ static void smooth(float *m, u32 camera)
         e->obs = e->tc = f;
         e->tp = 0;
         e->dlast = 0.0f;
-        S.n_rec++;
+        STAT(S.n_rec);
         return;
     }
     e->obs = f;
@@ -159,11 +165,11 @@ static void smooth(float *m, u32 camera)
         }
         e->tp = e->tc;
         e->tc = f;
-        S.n_rec++;
+        STAT(S.n_rec);
         if (jump) {
-            S.n_jump++;
+            STAT(S.n_jump);
             if (camera)
-                S.n_cut++;
+                STAT(S.n_cut);
             return;
         }
     }
@@ -177,7 +183,7 @@ static void smooth(float *m, u32 camera)
     for (u32 i = 0; i < 12; i++)
         m[i] = e->prev[i] + (e->cur[i] - e->prev[i]) * a;
     e->swp = f;
-    S.n_swap++;
+    STAT(S.n_swap);
 }
 
 /* Lisse un tableau de n matrices 3x4 une seule fois par image (un même modèle est
@@ -208,7 +214,7 @@ static void smooth_eyes(void)
         if (c && S.frame - S.eye_f[i] <= 2u && *(u32 *)c == NW_CAMERA_VT) {
             smooth((float *)(c + 0x148), 1);
             smooth((float *)(c + 0x178), 1);
-            S.n_eye++;
+            STAT(S.n_eye);
         }
     }
 }
@@ -317,13 +323,13 @@ u32 smooth_gate(const u8 *mgr, u32 did_update)
         S.tstate[i] = st;
     }
     if (on && mode && did_update && tchg)
-        S.n_tskip++;
+        STAT(S.n_tskip);
     u32 skip = (mode && did_update) && (!on || tchg);
     /* Le jeu saute lui-même le prochain dessin après une image trop lente
      * ([[mgr+0x1C]+0x1FE], testé juste après cette fonction) : pas d'interpolation. */
     const u8 *gfx = *(const u8 *const *)(mgr + 0x1C);
     if (!skip && gfx && gfx[0x1FE])
-        S.n_skip++, skip = 2u;
+        STAT(S.n_skip), skip = 2u;
     S.frame++;
     S.upd = did_update;
 #ifdef COUNT3D
@@ -338,7 +344,7 @@ u32 smooth_gate(const u8 *mgr, u32 did_update)
     S.interp = on && !skip;
     S.extra = on && mode && did_update && !skip;
     if (on && mode && did_update && !skip)
-        S.n_interp++;
+        STAT(S.n_interp);
     if (S.interp)
         smooth_eyes();
     return skip == 1u;
@@ -391,7 +397,7 @@ void smooth_fade(void)
     if (*(u32 *)(mgr + 0x40) == 0)
         *(u32 *)(mgr + 0x40) = cb;
     if (cb)
-        S.n_fade++;
+        STAT(S.n_fade);
 }
 
 /* nw::gfx::Camera : vue (+0x148) et son inverse (+0x178). */

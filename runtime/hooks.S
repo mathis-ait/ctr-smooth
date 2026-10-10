@@ -73,6 +73,22 @@ hook_hid:
     add     r1, r4, #0x98
     bx      lr
 
+@ Variante de mesure (build.py --inject) : comme hook_hid, plus les boutons injectés par le stub
+@ GDB (S.vpad). Sans code d'essai : utilisable avec le build distribué, dans les deux jeux.
+    .section .text.hidv, "ax"
+    .global hook_hidv
+hook_hidv:
+    ldr     r12, =S
+    ldr     r0, [r4, #0x78]
+    ldr     r1, [r12, #0x40]
+    orr     r0, r0, r1
+    str     r0, [r4, #0x78]
+    str     r0, [r12, #0xC8]
+    add     r1, r4, #0x98
+    bx      lr
+    .ltorg
+    .section .text.hooks, "ax"
+
     .global hook_nwmesh
 hook_nwmesh:
     push    {r0-r3, r12, lr}

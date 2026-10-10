@@ -22,9 +22,16 @@ from mkpatch import read_ips, write_ips  # noqa: E402
 
 GCC = os.environ.get('ARM_GCC_BIN', r'C:\Users\Thisma\Documents\Switch\tools-re\gcc\bin')
 CODE = os.environ.get('CTR_SMOOTH_CODE_BIN', r'C:\Users\Thisma\Documents\Switch\tools-re\rosa-or\code.bin')
-SHA = 'd587c98ac5c4dedacf9be4baf2d6b7d10169e6a63f8bc35b132002cc27bc1a37'
+# Jeux couverts (code.bin décompressé). Saphir Alpha EUR 1.0 a les mêmes adresses que Rubis Oméga
+# jusqu'à 0x3E8000, puis 8 octets plus tôt : aucun crochet n'est touché ; seule la fonction morte
+# commence à 0x004FBF18 au lieu de 0x004FBF20. Le runtime, placé à 0x004FBF20 et borné à
+# 0x004FE788, reste dans la fonction morte des deux jeux : le patch est le même.
+GAMES = {
+    'd587c98ac5c4dedacf9be4baf2d6b7d10169e6a63f8bc35b132002cc27bc1a37': ('Rubis Oméga EUR 1.0', 0x004FBF20),
+    'b7f9ce60361f3709ed0ce879658afe10a712f7db060640fa72bba826301b7c16': ('Saphir Alpha EUR 1.0', 0x004FBF18),
+}
 BASE = 0x00100000
-DEAD_FN_HEAD = 'f04f2de9b80f9fe5'  # 0x004FBF20 : push {r4-r11,lr} ; ldr r0,[pc,#0xFB8] (fonction morte)
+DEAD_FN_HEAD = 'f04f2de9b80f9fe5'  # début de la fonction morte : push {r4-r11,lr} ; ldr r0,[pc,#0xFB8] (fonction morte)
 
 
 def tool(name):
@@ -47,6 +54,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument('--code', default=CODE)
     ap.add_argument('--counters', action='store_true', help='ajoute les compteurs de trace de la phase 0')
+    ap.add_argument('--inject', action='store_true', help='build distribue + boutons injectes (S.vpad), sans code d essai')
     ap.add_argument('--test-input', action='store_true', help='injection de boutons via S.vpad (essais automatisés)')
     ap.add_argument('--count3d', action='store_true', help='compteur des passes de scene 3D (0x0038CEA4)')
     ap.add_argument('--probe', action='append', default=[], type=lambda s: int(s, 0),
@@ -61,8 +69,10 @@ def main():
         a.count3d = True
 
     code = open(a.code, 'rb').read()
-    if hashlib.sha256(code).hexdigest() != SHA:
-        sys.exit('code.bin inattendu (profil : Rubis Oméga EUR v1.0)')
+    game = GAMES.get(hashlib.sha256(code).hexdigest())
+    if not game:
+        sys.exit('code.bin inattendu (profils : %s)' % ', '.join(g[0] for g in GAMES.values()))
+    dead_head = game[1]
 
     out = os.path.join(HERE, 'build')
     os.makedirs(out, exist_ok=True)
@@ -88,7 +98,7 @@ def main():
     cflags = ['-marm', '-mcpu=mpcore', '-mfpu=vfp', '-mfloat-abi=hard', '-Os', '-ffreestanding',
               '-fno-builtin', '-nostdlib', '-fno-unwind-tables', '-fno-asynchronous-unwind-tables',
               '-fomit-frame-pointer', '-ffunction-sections', '-Wall', '-Wextra']
-    run(tool('gcc'), *cflags, *defines, *(['-DCOUNT3D'] if a.count3d else []), '-c', os.path.join(HERE, 'smooth.c'), '-o', os.path.join(out, 'smooth.o'))
+    run(tool('gcc'), *cflags, *defines, *(['-DCOUNT3D'] if a.count3d else []), *(['-DSTATS'] if a.test_input or a.count3d else []), '-c', os.path.join(HERE, 'smooth.c'), '-o', os.path.join(out, 'smooth.o'))
     run(tool('gcc'), *cflags, '-c', os.path.join(HERE, 'hooks.S'), '-o', os.path.join(out, 'hooks.o'))
     objs = [os.path.join(out, 'hooks.o'), os.path.join(out, 'smooth.o')]
     if a.probe:
@@ -110,8 +120,12 @@ def main():
         run(tool('gcc'), *tflags, *defines, '-c', os.path.join(HERE, 'test.c'), '-o', os.path.join(out, 'test.o'))
         objs.append(os.path.join(out, 'test.o'))
     elf = os.path.join(out, 'ctr-smooth.elf')
-    run(tool('ld'), '-T', os.path.join(HERE, 'link.ld'), '--gc-sections', '-e', 'hook_gate',
-        '-u', 'hook_camera', '-u', 'hook_h3d', '-u', 'hook_nwmesh', '-u', 'smooth_end', '-u', 'smooth_fade', '-u', 'hook_lytanim', '-u', 'hook_setview', '-u', 'hook_hid', '-u', 'S',
+    # build distribué : le runtime suit les crochets dans la marge de .text ; essais : ancienne zone
+    testbuild = bool(a.test_input or a.count3d)
+    script = open(os.path.join(HERE, 'link.ld'), encoding='utf-8').read().replace('RTEXT_REGION', 'CAVE_FN' if testbuild else 'CAVE_TEXT')
+    open(os.path.join(out, 'link.ld'), 'w', encoding='utf-8').write(script)
+    run(tool('ld'), '-T', os.path.join(out, 'link.ld'), '--gc-sections', '-e', 'hook_gate',
+        '-u', 'hook_camera', '-u', 'hook_h3d', '-u', 'hook_nwmesh', '-u', 'smooth_end', '-u', 'smooth_fade', '-u', 'hook_lytanim', '-u', 'hook_setview', '-u', 'hook_hidv' if a.inject else 'hook_hid', '-u', 'S',
         *(['-u', 'hook_pad', '-u', 'hook_touch'] if a.test_input else []), *(['-u', 'hook_cnt3d'] if a.count3d else []),
         *[x for i in range(len(a.probe[:8])) for x in ('-u', 'probe_%d' % i)],
         '--no-warn-mismatch', *objs, '-o', elf)
@@ -125,9 +139,10 @@ def main():
         if len(p) == 3:
             syms[p[2]] = int(p[0], 16)
     text = open(os.path.join(out, 'text.bin'), 'rb').read()
-    t0 = 0x00579610
+    rtext = open(os.path.join(out, 'rtext.bin'), 'rb').read()
+    t0, rt0 = syms['__text_start'], syms['__rtext_start']
     if t0 + len(text) > 0x0057A000:
-        sys.exit('runtime trop gros : .text %d / 2544' % len(text))
+        sys.exit('runtime trop gros pour la marge de .text : %d octets / %d' % (t0 + len(text) - 0x00579610, 0x0057A000 - 0x00579610))
     if not (0x006AE620 <= syms['S'] and syms['S'] + 0x40 <= 0x006AEFF0):
         sys.exit('etat hors de la marge du .bss')
 
@@ -148,7 +163,7 @@ def main():
         (0x00392FB4, 'add r4,r0,#0x148', bytes.fromhex('524f80e2'), branch(0x00392FB4, syms['hook_setview'], True)),
         # boutons tenus : interrupteur en jeu (release) ou entrées injectées (essais)
         (0x0036FB34, 'add r1,r4,#0x98', bytes.fromhex('981084e2'),
-         branch(0x0036FB34, syms['hook_pad' if a.test_input else 'hook_hid'], True)),
+         branch(0x0036FB34, syms['hook_pad' if a.test_input else 'hook_hidv' if a.inject else 'hook_hid'], True)),
     ]
     if a.test_input:
         hooks.append((0x0036FB40, 'mov r0,r4', bytes.fromhex('0400a0e1'), branch(0x0036FB40, syms['hook_touch'], True)))
@@ -166,12 +181,13 @@ def main():
     if any(orig(t0, len(text))):
         sys.exit('la marge de .text n est pas vide')
     recs.append((t0 - BASE, text))
-    # corps du runtime dans la fonction morte 0x004FBF20 (10 Ko), suivi du code des essais
-    FN0, FN1 = 0x004FBF20, 0x004FE790
-    rtext = open(os.path.join(out, 'rtext.bin'), 'rb').read()
-    if orig(FN0, 8) != bytes.fromhex(DEAD_FN_HEAD):
-        sys.exit('fonction morte 0x%08x : octets inattendus (autre version ?)' % FN0)
-    recs.append((FN0 - BASE, rtext))
+    FN0, FN1 = 0x004FBF20, 0x004FE788  # zone des essais (initialisation statique écrasée)
+    if testbuild:
+        if orig(dead_head, 8) != bytes.fromhex(DEAD_FN_HEAD):
+            sys.exit('zone des essais 0x%08x : octets inattendus (autre version ?)' % FN0)
+    elif rt0 != 0x00579610 or any(orig(rt0, len(rtext))):
+        sys.exit('runtime hors de la marge de .text')
+    recs.append((rt0 - BASE, rtext))
     testro = open(os.path.join(out, 'testro.bin'), 'rb').read() if os.path.exists(os.path.join(out, 'testro.bin')) else b''
     if testro:
         if len(testro) > 0x5E0 or any(orig(0x005EBA20, len(testro))):
@@ -189,11 +205,10 @@ def main():
         recs += instrument.records(draw60=False)
     os.makedirs(os.path.dirname(os.path.abspath(a.o)), exist_ok=True)
     write_ips(a.o, recs)
-    used = len(rtext) + len(testtext)
-    if FN0 + used > FN1:
-        sys.exit('runtime trop gros pour la fonction morte : %d / %d' % (used, FN1 - FN0))
-    print('crochets : %d octets en fin de .text (marge %d) ; runtime : %d octets en 0x%08x (marge %d) ; etat a 0x%08x' % (
-        len(text), 0x0057A000 - t0 - len(text), len(rtext), FN0, FN1 - FN0 - used, syms['S']))
+    if testbuild and FN0 + len(rtext) + len(testtext) > FN1:
+        sys.exit('essais trop gros pour leur zone : %d / %d' % (len(rtext) + len(testtext), FN1 - FN0))
+    print('runtime : %d octets en 0x%08x, crochets : %d octets en 0x%08x, marge de .text restante : %d ; etat a 0x%08x%s' % (
+        len(rtext), rt0, len(text), t0, 0x0057A000 - t0 - len(text), syms['S'], ' (build de test)' if testbuild else ''))
     for k in ('hook_gate', 'hook_camera', 'hook_h3d', 'hook_nwmesh', 'smooth_gate', 'smooth_end', 'S') + (('hook_pad',) if a.test_input else ()):
         print('  %-14s 0x%08x' % (k, syms[k]))
     print('->', a.o)

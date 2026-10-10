@@ -1,4 +1,4 @@
-# ctr-smooth : 60 fps natif pour Pokémon Rubis Oméga (3DS)
+# ctr-smooth : 60 fps natif pour Pokémon Rubis Oméga et Saphir Alpha (3DS)
 
 Patch `code.ips` pour l'émulateur Azahar : le jeu affiche 60 images par seconde au lieu de 30,
 **sans accélérer le jeu**. La logique reste à 30 Hz (musique, événements, durées et hasard
@@ -11,11 +11,11 @@ Ce dépôt est le runtime et l'outillage de rétro-ingénierie extraits de
 
 ## Utiliser le patch
 
-- Jeu couvert : **Pokémon Rubis Oméga EUR, version de la cartouche (1.0, Rev 2), sans la mise à
-  jour 1.4** (SHA-256 du `code.bin` décompressé :
-  `d587c98ac5c4dedacf9be4baf2d6b7d10169e6a63f8bc35b132002cc27bc1a37`). Sur une autre version, le
-  patch s'appliquerait à des adresses fausses.
-- Copier `runtime/build/code.ips` dans `%APPDATA%\Azahar\load\mods\000400000011C400\code.ips`.
+- Jeux couverts, **version de la cartouche (1.0, Rev 2), sans la mise à jour 1.4** : Pokémon
+  Rubis Oméga EUR (Title ID 000400000011C400, SHA-256 du `code.bin` décompressé `d587c98a…1a37`)
+  et Saphir Alpha EUR (000400000011C500, `b7f9ce60…7c16`). Le même patch sert aux deux. Sur une
+  autre version, il s'appliquerait à des adresses fausses.
+- Copier `runtime/build/code.ips` dans `%APPDATA%\Azahar\load\mods\<Title ID>\code.ips`.
 - En jeu, **L + Select** tenus une seconde coupent ou rétablissent le lissage.
 - Préférer Vulkan : l'ordinateur dessine deux fois plus d'images.
 
@@ -38,6 +38,23 @@ logique du jeu reste à 30 Hz (`update()` jamais modifié), le jeu dessine à ch
 ajoutée est rendue avec des matrices interpolées entre les deux derniers ticks.
 
 Cible : Pokémon Rubis Oméga EUR, code cartouche v1.0 (Rev 2), Azahar 2126.1.2.
+
+## Suite — lot F : Saphir Alpha, et correctif de la 0.9.0 (10 octobre 2026)
+
+- **Saphir Alpha EUR 1.0** (SHA-256 `b7f9ce60…7c16`) : mêmes adresses que Rubis Oméga jusqu'à
+  0x3E8000, puis 8 octets plus tôt ; `.rodata` et `.data` aux mêmes adresses (seuls des pointeurs
+  vers le code changent). Aucun crochet ni aucune donnée lue par le runtime n'est concerné : **le
+  même `code.ips` sert aux deux jeux** (`build.py --code` donne un fichier identique octet pour
+  octet). Vérifié en jeu : intérieur 29 images distinctes sur 29, extérieur 27 sur 29 lissage actif
+  contre 15 coupé.
+- **Bug de la 0.9.0** : la « fonction morte » qui hébergeait le runtime (0x004FBF20) est une
+  initialisation statique appelée au démarrage, sans référence directe (découvert parce que
+  Saphir Alpha plantait). Dans Rubis Oméga, le démarrage exécutait le début du runtime, qui
+  écrivait à une adresse non mappée, et le tableau qu'elle initialise (0x0062FC34) restait vide.
+  Correctif : le runtime distribué tient entièrement dans la marge de fin de `.text` (compteurs de
+  statistiques réservés aux builds de test) ; réinstaller depuis Kaleido remet la zone d'origine.
+  Test de non-régression dans `crates/core/src/data/fps60_ctr.rs`.
+- Mesures avec le build distribué : `build.py --inject` ajoute seulement l'injection de boutons.
 
 ## Suite — lot E : intégration dans Kaleido (10 octobre 2026)
 
@@ -90,7 +107,7 @@ Azahar ne suit pas (89 % de vitesse) : Vulkan conseillé. Méthode : `build.py -
 | Sortie d'un bâtiment | l'extérieur visible une image avant le fondu : **corrigé** |
 | Azahar limité à 50 % | rapport tick / dessin conservé, aucun dessin sauté, pas de plantage |
 | Interrupteur en jeu | **L + Select** tenus une seconde : lissage coupé ou rétabli |
-| Place pour le code | runtime déplacé dans une fonction morte de 10 Ko (7,7 Ko libres) ; la marge de `.text` ne garde que les crochets |
+| Place pour le code | ~~runtime déplacé dans une fonction morte~~ : zone erronée, corrigé au lot F (voir plus haut) |
 
 Repli automatique « ordinateur trop lent » : impossible à détecter depuis le jeu (il compte en
 temps émulé) ; l'interrupteur en tient lieu. Détails dans [`docs/runtime.md`](docs/runtime.md).
@@ -198,7 +215,7 @@ tools/framecap.py     capture image par image et comptage des images distinctes
 tools/replay_static.py partie scriptée sans pause GDB ; snapdiff.py, verify_runs.py, tracediff.py
 tools/drawdiff.py     effets de bord d'un dessin sur le tas du jeu (dessin ajouté / d'origine)
 tools/perframe.py, emuspeed.py, rtcap.py, rtcheck.py, encounter.sh   mesures complémentaires
-runtime/test.c        code des essais (Thumb, builds de test, logé dans une fonction morte)
+runtime/test.c        code des essais (Thumb, builds de test seulement, voir docs/runtime.md § Mémoire)
 tools/rngcheck.py     tirages aléatoires pendant les dessins interpolés
 tools/azahar_gdb.py   client GDB RSP ; mkpatch.py : IPS ; ini_set.py / sandbox_config.py : config
 proto/replay/         scripts (Route 103, rival), traces des séries de vérification, rapports drawdiff
