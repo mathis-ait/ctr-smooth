@@ -2,6 +2,7 @@
 # Azahar portable (bac a sable) pour les essais ctr-smooth. Jamais l'Azahar de l'utilisateur.
 #   sandbox.sh start <code.ips|none>   lance Rubis Omega avec ce patch (fenetre discrete)
 #     SANDBOX_SAVE=sandbox-save-mart : autre sauvegarde de reference (tools-re\<nom>)
+#     SANDBOX_UPDATE=or14 : mise a jour installee (tools-re\sandbox-updates\<nom>), aucune sinon
 #   sandbox.sh stop                    ferme l'Azahar portable
 #   sandbox.sh continue                intro -> ecran titre -> Continuer (sauvegarde copiee)
 # Azahar ne lit la manette que si sa fenetre a le focus : les entrees sont injectees
@@ -25,6 +26,8 @@ case "$1" in
     # une partie scriptee peut sauvegarder (defaite, menus) et fausser les suivantes
     SAVE="$S/user/sdmc/Nintendo 3DS/00000000000000000000000000000000/00000000000000000000000000000000/title/00040000/$TLO/data"
     rm -rf "$SAVE"; mkdir -p "$SAVE"; cp -r "C:/Users/Thisma/Documents/Switch/tools-re/${SANDBOX_SAVE:-sandbox-save-orig}/." "$SAVE/"
+    # mise à jour installée : SANDBOX_UPDATE=or14 (rangée par tools/sandbox_update.py), aucune par défaut
+    "$PY" -I "$T/sandbox_update.py" use "${SANDBOX_UPDATE:-none}" >/dev/null
     M="$S/user/load/mods/00040000${TLO^^}"; mkdir -p "$M"; rm -f "$M/code.ips"
     [ "$2" != none ] && cp "$2" "$M/code.ips"
     cat > "$TEMP/ctr-smooth-launch.ps1" <<PS

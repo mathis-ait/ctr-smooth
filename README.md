@@ -11,11 +11,15 @@ Ce dépôt est le runtime et l'outillage de rétro-ingénierie extraits de
 
 ## Utiliser le patch
 
-- Jeux couverts, **version de la cartouche (1.0, Rev 2), sans la mise à jour 1.4** : Pokémon
-  Rubis Oméga EUR (Title ID 000400000011C400, SHA-256 du `code.bin` décompressé `d587c98a…1a37`)
-  et Saphir Alpha EUR (000400000011C500, `b7f9ce60…7c16`). Le même patch sert aux deux. Sur une
-  autre version, il s'appliquerait à des adresses fausses.
-- Copier `runtime/build/code.ips` dans `%APPDATA%\Azahar\load\mods\<Title ID>\code.ips`.
+- Jeux couverts : Pokémon Rubis Oméga EUR (Title ID 000400000011C400) et Saphir Alpha EUR
+  (000400000011C500), le même patch servant aux deux jeux d'une même version :
+  - **version de la cartouche (1.0, Rev 2)**, SHA-256 du `code.bin` décompressé `d587c98a…1a37`
+    (Rubis Oméga) et `b7f9ce60…7c16` (Saphir Alpha) : `runtime/build/code.ips` ;
+  - **mise à jour 1.4** installée dans Azahar, `ff2ce8f4…7e80` et `d0e00228…938e` :
+    `runtime/build/code-14.ips`.
+
+  Sur une autre version, le patch s'appliquerait à des adresses fausses.
+- Copier le patch de sa version dans `%APPDATA%\Azahar\load\mods\<Title ID>\code.ips`.
 - En jeu, **L + Select** tenus une seconde coupent ou rétablissent le lissage.
 - Préférer Vulkan : l'ordinateur dessine deux fois plus d'images.
 
@@ -37,7 +41,31 @@ Runtime et outillage du PRD « 60 FPS natif : 3DS (ROSA) puis toutes plateformes
 logique du jeu reste à 30 Hz (`update()` jamais modifié), le jeu dessine à chaque VBlank, et l'image
 ajoutée est rendue avec des matrices interpolées entre les deux derniers ticks.
 
-Cible : Pokémon Rubis Oméga EUR, code cartouche v1.0 (Rev 2), Azahar 2126.1.2.
+Cibles : Pokémon Rubis Oméga et Saphir Alpha EUR, version de la cartouche (1.0) et mise à jour 1.4,
+Azahar 2126.1.2.
+
+## Suite — lot H : mises à jour 1.4 (11 octobre 2026)
+
+- **Programmes** : Rubis Oméga 1.4 (SHA-256 `ff2ce8f4…7e80`) et Saphir Alpha 1.4 (`d0e00228…938e`),
+  lus dans la mise à jour installée par Azahar (`sdmc/Nintendo 3DS/…/title/0004000e/<titre>/content`,
+  NCCH déchiffré). Comme en 1.0, un seul `code.ips` sert aux deux jeux : `runtime/build/code-14.ips`.
+- **Adresses** retrouvées par signature (`re/reloc.py`, `re/reloc2.py`) : profils `OR14` et `AS14` de
+  `runtime/build.py` (porte 0x10E528, fin de dessin 0x10E614, caméra 0x376134, H3D 0x39B5C4…).
+- **Place** : la marge de fin de `.text` n'a plus que 2 036 octets (0x579810). `smooth()` reste en
+  ARM (calcul VFP), le reste du runtime est compilé en Thumb et appelé par `BLX` (`split=True`).
+  Aucune fonction du jeu n'est réutilisée : `re/deadfn.py` et `re/cro_static_refs.py` montrent qu'une
+  fonction sans référence dans `code.bin` peut être appelée par un CRO (import anonyme de
+  `|static|`).
+- **Vérifié dans le bac à sable** (`tools/sandbox_update.py use or14|as14`), images distinctes sur 29
+  transitions, lissage actif contre coupé : Rubis Oméga 1.4 intérieur et extérieur 29 contre 14, Envol
+  29 contre 15, combat 58 images présentées par seconde contre 29 ; Saphir Alpha 1.4 intérieur 29
+  contre 15, extérieur 29. Les builds de test à rejeu scripté n'existent qu'en 1.0 ; la logique est
+  le même code.
+- **Kaleido** lit le programme de la mise à jour quand elle est installée, sinon celui de la ROM. Le
+  `code.ips` d'avant l'installation est gardé à part (`kaleido-fps60-base.ips`) et remis au retrait.
+  Si la mise à jour est installée ou retirée après coup, l'entrée repasse à « non installée » avec un
+  avertissement : il faut réinstaller. Le taux de chromatiques du Randomizer, calculé pour la
+  cartouche, ne se fusionne pas avec la 1.4 (installation refusée).
 
 ## Suite — lot F : Saphir Alpha, et correctif de la 0.9.0 (10 octobre 2026)
 
@@ -193,10 +221,11 @@ Profil : [`profiles/000400000011C400-v1.0.fps60.yaml`](profiles/000400000011C400
 
 ## Essayer
 
-`runtime/build/code.ips` (lissage seul ; `build.py --merge` le fusionne avec un autre `code.ips`, par exemple
-le taux de shiny écrit par Kaleido) se dépose en
-`%APPDATA%\Azahar\load\mods\000400000011C400\code.ips`. Rubis Oméga EUR **sans la mise à jour 1.4**
-uniquement : sur une autre version, Azahar appliquerait le patch à des adresses fausses.
+`runtime/build/code.ips` (version de la cartouche, 1.0) ou `runtime/build/code-14.ips` (mise à jour
+1.4 installée dans Azahar) se dépose en `%APPDATA%\Azahar\load\mods\<Title ID>\code.ips`
+(`000400000011C400` Rubis Oméga, `000400000011C500` Saphir Alpha), EUR uniquement. Sur une autre
+version, Azahar appliquerait le patch à des adresses fausses : `build.py` vérifie le SHA-256 du
+programme et les octets d'origine.
 
 ## Phase 0 (fondations) — rappel
 

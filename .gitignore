@@ -10,6 +10,7 @@ re/out/
 # Compilation : seul le patch distribué est versionné
 runtime/build/*
 !runtime/build/code.ips
+!runtime/build/code-14.ips
 # Essais
 proto/replay/*.bin
 __pycache__/

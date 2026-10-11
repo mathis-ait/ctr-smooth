@@ -4,6 +4,15 @@
 
 ---
 
+# (prochaine version) : mises à jour 1.4
+
+## 60 fps natif
+- Rubis Oméga et Saphir Alpha **avec la mise à jour 1.4** installée dans Azahar : Kaleido lit le programme de la mise à jour et pose le patch qui lui correspond. La version de la cartouche (1.0) reste couverte.
+- Si tu installes ou retires la mise à jour 1.4 après avoir activé le 60 fps natif, l'entrée le signale : clique sur Installer pour refaire le patch pour la nouvelle version.
+- Avec la mise à jour 1.4, le taux de chromatiques du Randomizer ne peut pas s'ajouter : il est calculé pour la version de la cartouche.
+
+---
+
 # Kaleido 0.9.0 : Rubis Oméga en 60 fps natif (voir aussi 0.10.1 : Saphir Alpha et correctif)
 
 ## 60 fps natif (expérimental)

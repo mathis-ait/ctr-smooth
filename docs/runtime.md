@@ -1,5 +1,10 @@
 # Runtime ctr-smooth (phase 2 et suite) — Rubis Oméga EUR v1.0
 
+Les adresses ci-dessous sont celles de la version 1.0. Saphir Alpha 1.0 utilise le même patch ; les
+mises à jour 1.4 des deux jeux ont leurs propres adresses (profils `OR14` / `AS14` de
+`runtime/build.py`, patch `runtime/build/code-14.ips`), avec le runtime en 0x579810 et la structure
+`State` toujours en 0x006AE640.
+
 ## Principe retenu
 
 La logique (`update()`) n'est jamais modifiée. Le jeu dessine désormais à chaque VBlank, et chaque

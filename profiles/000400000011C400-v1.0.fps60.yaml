@@ -5,7 +5,7 @@
 game: Pokémon Rubis Oméga
 title_id: 000400000011C400
 region: EUR
-version: "1.0"           # NCCH 0x0002, ExHeader « sango-1 » remaster 3 ; mise à jour 1.4 NON couverte
+version: "1.0"           # NCCH 0x0002, ExHeader « sango-1 » remaster 3 ; 1.4 : profil OR14 de runtime/build.py
 code_sha256: d587c98ac5c4dedacf9be4baf2d6b7d10169e6a63f8bc35b132002cc27bc1a37
 code_base: 0x00100000
 sections:

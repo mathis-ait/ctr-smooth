@@ -24,6 +24,11 @@
  */
 #include "state.h"
 
+/* Adresses propres à chaque version du jeu : définies par build.py (profils GAMES). */
+#if !defined(ADDR_TRANSMGR) || !defined(ADDR_FADE_FN) || !defined(ADDR_CAM_VT) || !defined(ADDR_SKEL_VT)
+#error "compiler avec build.py (adresses de la version du jeu)"
+#endif
+
 #define TAB_BITS 11u
 #define TAB_N (1u << TAB_BITS)
 #define TAB_PROBES 16u
@@ -58,6 +63,15 @@ _Static_assert(sizeof(Entry) == 128, "Entry : 128 octets (table 0x40000)");
 
 
 
+/* 1.4 : la marge de .text est plus petite ; build.py compile alors smooth() en ARM
+ * (PART_CORE, calcul flottant VFP) et le reste en Thumb (PART_REST, plus compact). */
+#if defined(PART_CORE) || defined(PART_REST)
+#define SPLIT_FN
+#else
+#define SPLIT_FN static
+#endif
+
+#ifndef PART_CORE
 __attribute__((section(".state"), used)) State S;
 
 /* hooks.S lit S.extra à cet offset */
@@ -82,7 +96,10 @@ static u32 svc_alloc(u32 addr, u32 size, u32 *out)
     return r0;
 }
 
-static Entry *find(u32 key)
+#endif
+
+#ifndef PART_CORE
+SPLIT_FN Entry *find(u32 key)
 {
     Entry *t = S.tab, *cand = 0;
     u32 h = (key * 2654435761u) >> (32u - TAB_BITS);
@@ -106,11 +123,16 @@ static Entry *find(u32 key)
     return cand;
 }
 
+#else
+Entry *find(u32 key);
+#endif
+
+#ifndef PART_REST
 static inline float fabs_(float x) { return x < 0.0f ? -x : x; }
 
 /* Point d'interception commun : `m` est une matrice 3x4 que le rendu va lire.
  * camera = 1 : seuil de rotation serré, une coupure est comptée à part. */
-static void smooth(float *m, u32 camera)
+SPLIT_FN void smooth(float *m, u32 camera)
 {
     if (!S.interp)
         return;
@@ -185,6 +207,11 @@ static void smooth(float *m, u32 camera)
     e->swp = f;
     STAT(S.n_swap);
 }
+#else
+void smooth(float *m, u32 camera);
+#endif
+
+#ifndef PART_CORE
 
 /* Lisse un tableau de n matrices 3x4 une seule fois par image (un même modèle est
  * rendu maillage par maillage : sans cette garde, ses os seraient revus à chaque fois). */
@@ -206,7 +233,7 @@ static void smooth_array(float *mats, u32 n)
  * passer par hook_camera. Leurs vues sont lissées au début de chaque dessin.
  * Une caméra n'est retenue que si sa vue a été posée au tick courant ou au précédent
  * (frame - eye_f <= 2) : une caméra libérée entre-temps n'est jamais touchée. */
-#define NW_CAMERA_VT 0x005DBAB8u
+#define NW_CAMERA_VT ADDR_CAM_VT
 static void smooth_eyes(void)
 {
     for (u32 i = 0; i < 4u; i++) {
@@ -312,7 +339,7 @@ u32 smooth_gate(const u8 *mgr, u32 did_update)
      * renouvelle l'image capturée qu'affiche la transition lors de son propre dessin,
      * au tick suivant. Un dessin ajouté montrerait l'ancienne capture (image blanche en
      * entrant dans un bâtiment, extérieur une image en sortant) : pas de dessin ajouté. */
-    const u8 *tm = *(const u8 *const *)0x0062F830u;
+    const u8 *tm = *(const u8 *const *)ADDR_TRANSMGR;
     u32 tchg = 0;
     for (u32 i = 0; i < 2u; i++) {
         const u8 *c = tm ? *(const u8 *const *)(tm + 0x38u + 4u * i) : 0;
@@ -376,9 +403,9 @@ void smooth_end(void)
 typedef void (*Fn0)(void);
 void smooth_fade(void)
 {
-    u8 *mgr = *(u8 **)0x0062F830u;
+    u8 *mgr = *(u8 **)ADDR_TRANSMGR;
     if (!S.extra || !mgr) {
-        ((Fn0)0x0011CB60u)();
+        ((Fn0)ADDR_FADE_FN)();
         return;
     }
     u8 *c0 = *(u8 **)(mgr + 0x38), *c1 = *(u8 **)(mgr + 0x3C);
@@ -389,7 +416,7 @@ void smooth_fade(void)
     if (c1)
         c1[0x46] = 1;
     *(u32 *)(mgr + 0x40) = 0;
-    ((Fn0)0x0011CB60u)();
+    ((Fn0)ADDR_FADE_FN)();
     if (c0)
         c0[0x46] = p0;
     if (c1)
@@ -450,7 +477,7 @@ void smooth_nwmodel(u8 *model)
     if (!S.tab || !model)
         return;
     smooth((float *)(model + 0x8C), 0);
-    if (*(u32 *)model == 0x005DB47Cu) {
+    if (*(u32 *)model == ADDR_SKEL_VT) {
         u8 *sk = *(u8 **)(model + 0x220);
         if (sk) {
             smooth_array(*(float **)(sk + 0x40), *(u32 *)(sk + 0x48));
@@ -458,4 +485,4 @@ void smooth_nwmodel(u8 *model)
         }
     }
 }
-
+#endif /* PART_CORE */

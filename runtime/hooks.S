@@ -27,7 +27,7 @@ hook_camera:
     vpop    {d0-d7}
     pop     {r0-r3, r12, lr}
     push    {r0-r11, lr}
-    b       0x00375EAC
+    b       ADDR_CAMERA + 4
 
 @ 0x0039B338 (rendu d'un maillage H3D) : r0 = modèle.
     .global hook_h3d
@@ -38,7 +38,7 @@ hook_h3d:
     vpop    {d0-d7}
     pop     {r0-r3, r12, lr}
     push    {r3-r11, lr}
-    b       0x0039B33C
+    b       ADDR_H3D + 4
 
 @ 0x0014D618 (avance des animations de l'interface 2D, appelée au dessin) :
 @ « push {r4-r12,lr} » devient « b hook_lytanim ». Sur le dessin ajouté (S.extra),
@@ -50,7 +50,7 @@ hook_lytanim:
     cmp     r12, #0
     bxne    lr
     push    {r4-r12, lr}
-    b       0x0014D61C
+    b       ADDR_LYTANIM + 4
     .ltorg
 
 @ 0x002EC354 (nw::gfx MeshRenderer::RenderMesh) : r2 = modèle.
@@ -118,7 +118,7 @@ hook_nwmesh:
     vpop    {d0-d7}
     pop     {r0-r3, r12, lr}
     push    {r4-r8, lr}
-    b       0x002EC358
+    b       ADDR_NWMESH + 4
 
 @ Builds de test uniquement (build.py --test-input) : 0x0036FB34, juste après
 @ nn::hid::PadReader::ReadLatest dans gfl::ui::CTR_DeviceManager::Main, devient
@@ -133,7 +133,7 @@ hook_cnt3d:
     bl      smooth_cnt3d
     pop     {r0-r3, r12, lr}
     push    {r3-r7, lr}
-    b       0x0038CEA8
+    b       ADDR_CNT3D + 4
 
     .section .text.testpad, "ax"
     .global hook_pad
