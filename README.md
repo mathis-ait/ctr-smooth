@@ -46,7 +46,8 @@ Cible : Pokémon Rubis Oméga EUR, code cartouche v1.0 (Rev 2), Azahar 2126.1.2.
   vers le code changent). Aucun crochet ni aucune donnée lue par le runtime n'est concerné : **le
   même `code.ips` sert aux deux jeux** (`build.py --code` donne un fichier identique octet pour
   octet). Vérifié en jeu : intérieur 29 images distinctes sur 29, extérieur 27 sur 29 lissage actif
-  contre 15 coupé.
+  contre 15 coupé ; Envol en virage 29 sur 29 contre 17 ; combat sauvage 58 images présentées par
+  seconde réelle (57 pendant une attaque) contre 29 coupé.
 - **Bug de la 0.9.0** : la « fonction morte » qui hébergeait le runtime (0x004FBF20) est une
   initialisation statique appelée au démarrage, sans référence directe (découvert parce que
   Saphir Alpha plantait). Dans Rubis Oméga, le démarrage exécutait le début du runtime, qui
@@ -54,7 +55,9 @@ Cible : Pokémon Rubis Oméga EUR, code cartouche v1.0 (Rev 2), Azahar 2126.1.2.
   Correctif : le runtime distribué tient entièrement dans la marge de fin de `.text` (compteurs de
   statistiques réservés aux builds de test) ; réinstaller depuis Kaleido remet la zone d'origine.
   Test de non-régression dans `crates/core/src/data/fps60_ctr.rs`.
-- Mesures avec le build distribué : `build.py --inject` ajoute seulement l'injection de boutons.
+- Mesures avec le build distribué : `build.py --inject` ajoute l'injection de boutons et du stick
+  et le compteur des images présentées (code placé dans la marge de `.rodata`, bac à sable
+  seulement) : les builds de test classiques plantent Saphir Alpha.
 
 ## Suite — lot E : intégration dans Kaleido (10 octobre 2026)
 

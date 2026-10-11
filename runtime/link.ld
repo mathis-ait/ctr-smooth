@@ -31,6 +31,12 @@ SECTIONS
         *test.o(.text .text.*)
     } > CAVE_FN
 
+    /* variante de mesure (build.py --inject) : compteur et injection, dans la marge de .rodata
+     * (exécutable dans Azahar seulement : bac à sable, jamais dans le patch distribué) */
+    .hidv : {
+        *(.text.hidv)
+    } > CAVE_RO
+
     .text : {
         __text_start = .;
         *(.text.hooks)

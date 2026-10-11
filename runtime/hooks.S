@@ -76,6 +76,23 @@ hook_hid:
 @ Variante de mesure (build.py --inject) : comme hook_hid, plus les boutons injectés par le stub
 @ GDB (S.vpad). Sans code d'essai : utilisable avec le build distribué, dans les deux jeux.
     .section .text.hidv, "ax"
+@ Variante de mesure : décision de dessin précédée d'un compteur des images présentées sur
+@ l'écran du haut (changements de l'index GSP 0x10002200 -> S.lcd_idx / S.n_flip), sans pause GDB.
+    .global hook_gatev
+hook_gatev:
+    ldr     r12, =S
+    ldr     r2, =0x10002200
+    ldrb    r3, [r2]
+    ldr     r2, [r12, #0x1B8]
+    cmp     r3, r2
+    strne   r3, [r12, #0x1B8]
+    ldrne   r2, [r12, #0x1BC]
+    addne   r2, r2, #1
+    strne   r2, [r12, #0x1BC]
+    mov     r0, r4
+    mov     r1, r6
+    b       smooth_gate
+
     .global hook_hidv
 hook_hidv:
     ldr     r12, =S
@@ -84,6 +101,9 @@ hook_hidv:
     orr     r0, r0, r1
     str     r0, [r4, #0x78]
     str     r0, [r12, #0xC8]
+    ldr     r1, [r12, #0x1D8]       @ S.vstick : stick injecté (x | y << 16), 0 = manette
+    cmp     r1, #0
+    strne   r1, [r4, #0x84]
     add     r1, r4, #0x98
     bx      lr
     .ltorg

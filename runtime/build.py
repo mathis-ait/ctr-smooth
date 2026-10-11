@@ -125,7 +125,7 @@ def main():
     script = open(os.path.join(HERE, 'link.ld'), encoding='utf-8').read().replace('RTEXT_REGION', 'CAVE_FN' if testbuild else 'CAVE_TEXT')
     open(os.path.join(out, 'link.ld'), 'w', encoding='utf-8').write(script)
     run(tool('ld'), '-T', os.path.join(out, 'link.ld'), '--gc-sections', '-e', 'hook_gate',
-        '-u', 'hook_camera', '-u', 'hook_h3d', '-u', 'hook_nwmesh', '-u', 'smooth_end', '-u', 'smooth_fade', '-u', 'hook_lytanim', '-u', 'hook_setview', '-u', 'hook_hidv' if a.inject else 'hook_hid', '-u', 'S',
+        '-u', 'hook_camera', '-u', 'hook_h3d', '-u', 'hook_nwmesh', '-u', 'smooth_end', '-u', 'smooth_fade', '-u', 'hook_lytanim', '-u', 'hook_setview', *(['-u', 'hook_hidv', '-u', 'hook_gatev'] if a.inject else ['-u', 'hook_hid']), '-u', 'S',
         *(['-u', 'hook_pad', '-u', 'hook_touch'] if a.test_input else []), *(['-u', 'hook_cnt3d'] if a.count3d else []),
         *[x for i in range(len(a.probe[:8])) for x in ('-u', 'probe_%d' % i)],
         '--no-warn-mismatch', *objs, '-o', elf)
@@ -133,6 +133,7 @@ def main():
     run(tool('objcopy'), '-O', 'binary', '-j', '.testro', elf, os.path.join(out, 'testro.bin'))
     run(tool('objcopy'), '-O', 'binary', '-j', '.testtext', elf, os.path.join(out, 'testtext.bin'))
     run(tool('objcopy'), '-O', 'binary', '-j', '.rtext', elf, os.path.join(out, 'rtext.bin'))
+    run(tool('objcopy'), '-O', 'binary', '-j', '.hidv', elf, os.path.join(out, 'hidv.bin'))
     syms = {}
     for line in run(tool('nm'), elf).splitlines():
         p = line.split()
@@ -151,7 +152,7 @@ def main():
 
     # Instructions remplacées et leur valeur d'origine (contrôle anti-mauvaise version).
     hooks = [
-        (0x0010E530, 'ldrb r0,[r4,#0xd]', bytes.fromhex('0d00d4e5'), branch(0x0010E530, syms['hook_gate'], True)),
+        (0x0010E530, 'ldrb r0,[r4,#0xd]', bytes.fromhex('0d00d4e5'), branch(0x0010E530, syms['hook_gatev' if a.inject else 'hook_gate'], True)),
         (0x0010E534, 'rsb r1,r6,#0', bytes.fromhex('001066e2'), bytes.fromhex('000050e3')),  # cmp r0,#0
         (0x0010E538, 'tst r0,r1', bytes.fromhex('010010e1'), bytes.fromhex('00f020e3')),     # nop
         (0x0010E61C, 'nop', bytes.fromhex('00f020e3'), branch(0x0010E61C, syms['smooth_end'], True)),
@@ -188,6 +189,11 @@ def main():
     elif rt0 != 0x00579610 or any(orig(rt0, len(rtext))):
         sys.exit('runtime hors de la marge de .text')
     recs.append((rt0 - BASE, rtext))
+    hidv = open(os.path.join(out, 'hidv.bin'), 'rb').read() if os.path.exists(os.path.join(out, 'hidv.bin')) else b''
+    if hidv:
+        if not a.inject or any(orig(0x005EBA20, len(hidv))):
+            sys.exit('variante de mesure : code hors de sa zone')
+        recs.append((0x005EBA20 - BASE, hidv))
     testro = open(os.path.join(out, 'testro.bin'), 'rb').read() if os.path.exists(os.path.join(out, 'testro.bin')) else b''
     if testro:
         if len(testro) > 0x5E0 or any(orig(0x005EBA20, len(testro))):
