@@ -63,8 +63,8 @@ Azahar 2126.1.2.
   le même code.
 - **Kaleido** lit le programme de la mise à jour quand elle est installée, sinon celui de la ROM. Le
   `code.ips` d'avant l'installation est gardé à part (`kaleido-fps60-base.ips`) et remis au retrait.
-  Si la mise à jour est installée ou retirée après coup, l'entrée repasse à « non installée » avec un
-  avertissement : il faut réinstaller. Le taux de chromatiques du Randomizer, calculé pour la
+  Si la mise à jour est installée ou retirée après coup, l'entrée le signale et propose « Mettre à
+  jour » (refaire le patch pour la version actuelle) ou « Retirer ». Le taux de chromatiques du Randomizer, calculé pour la
   cartouche, ne se fusionne pas avec la 1.4 (installation refusée).
 
 ## Suite — lot F : Saphir Alpha, et correctif de la 0.9.0 (10 octobre 2026)
